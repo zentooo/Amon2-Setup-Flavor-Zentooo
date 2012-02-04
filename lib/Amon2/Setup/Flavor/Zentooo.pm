@@ -1,61 +1,302 @@
+use strict;
+use warnings FATAL => 'all';
+use utf8;
+
 package Amon2::Setup::Flavor::Zentooo;
-use 5.008_001;
+use parent qw(Amon2::Setup::Flavor::Basic);
+use File::Path ();
+
+sub create_makefile_pl {
+    my ($self, $prereq_pm) = @_;
+
+    $self->SUPER::create_makefile_pl(
+        +{
+            %{ $prereq_pm || {} },
+            'String::CamelCase' => '0.02',
+            'Module::Pluggable::Object' => 0, # was first released with perl v5.8.9
+        },
+    );
+}
+
+sub write_static_files {
+    my $self = shift;
+
+    $self->SUPER::write_static_files("static/");
+}
+
+sub write_templates {
+    my $self = shift;
+
+    $self->SUPER::write_templates("tmpl/");
+}
+
+sub run {
+    my $self = shift;
+
+    $self->SUPER::run();
+
+    $self->write_file('app.psgi', <<'...', +{ header => $self->psgi_header });
+<% $header %>
+use <% $module _ '::Web' %>;
+use Plack::App::File;
+use Plack::Util;
+
+my $basedir = File::Spec->rel2abs(dirname(__FILE__));
+{
+    my $c = <% $module _ '::Web' %>->new();
+    $c->setup_schema();
+}
+builder {
+    enable 'Plack::Middleware::Static',
+        path => qr{^(?:/robots\.txt|/favicon\.ico)$},
+        root => File::Spec->catdir(dirname(__FILE__), 'static');
+    enable 'Plack::Middleware::ReverseProxy';
+
+    mount '/static/' => Plack::App::File->new(root => File::Spec->catdir($basedir, 'static'));
+    mount '/' => <% $module %>::Web->to_app();
+};
+...
+
+    $self->write_file('tmpl/error.tt', <<'...');
+[% WRAPPER 'include/layout.tt' %]
+
+<div class="alert-message error">
+    An error occurred : [% message %]
+</div>
+
+[% END %]
+...
+
+    $self->write_file('tmpl/index.tt', <<'...');
+[% WRAPPER 'include/layout.tt' %]
+
+<section>
+    <h1>Hello</h1>
+</section>
+
+[% END %]
+...
+
+    $self->write_file('tmpl/include/layout.tt', <<'...');
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta http-equiv="content-type" content="text/html; charset=utf-8" />
+    <title>[% title || '<%= $dist %>' %]</title>
+    <meta http-equiv="Content-Style-Type" content="text/css" />
+    <meta http-equiv="Content-Script-Type" content="text/javascript" />
+    <meta name="viewport" content="width=device-width, minimum-scale=1.0, maximum-scale=1.0"]]>
+    <meta name="format-detection" content="telephone=no" />
+    <% $tags %>
+    <link href="[% static_file('/static/css/style.css') %]" rel="stylesheet" type="text/css" media="screen" />
+    <script src="[% static_file('/static/js/main.js') %]"></script>
+    <!--[if lt IE 9]>
+        <script src="http://html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+</head>
+<body[% IF bodyID %] id="[% bodyID %]"[% END %]>
+    <div class="topbar-wrapper" style="z-index: 5;">
+        <div class="topbar">
+            <div class="topbar-inner">
+                <div class="container">
+                <h3><a href="#"><% $dist %></a></h3>
+                </div>
+            </div><!-- /topbar-inner -->
+        </div><!-- /topbar -->
+    </div>
+    <div class="container-fluid">
+        <div class="sidebar">
+                [% INCLUDE "include/sidebar.tt" %]
+        </div>
+        <div class="content">
+            [% content %]
+        </div>
+    </div>
+    <footer class="footer">
+        Powered by <a href="http://amon.64p.org/">Amon2</a>
+    </footer>
+</body>
+</html>
+...
+
+    $self->write_file('static/css/style.css', <<'...', {color1 => '#117711', color2 => '#119911'});
+body {
+    margin-top: 50px;
+}
+
+footer {
+    text-align: right;
+    padding-right: 10px;
+    padding-top: 2px; }
+    footer a {
+        text-decoration: none;
+        color: black;
+        font-weight: bold;
+    }
+
+/* smart phones */
+@media screen and (max-device-width: 480px) {
+}
+
+.topbar-inner,.topbar .fill{
+    background-color:<% color1 %>;
+    background-repeat:repeat-x;
+    background-image:-khtml-gradient(linear, left top, left bottom, from(<% color2 %>), to(<% color1 %>));
+    background-image:-moz-linear-gradient(top, <% color2 %>, <% color1 %>);
+    background-image:-ms-linear-gradient(top, <% color2 %>, <% color1 %>);
+    background-image:-webkit-gradient(linear, left top, left bottom, color-stop(0%, <% color2 %>), color-stop(100%, <% color1 %>));
+    background-image:-webkit-linear-gradient(top, <% color2 %>, <% color1 %>);
+    background-image:-o-linear-gradient(top, <% color2 %>, <% color1 %>);
+    background-image:linear-gradient(top, <% color2 %>, <% color1 %>);
+    filter:progid:DXImageTransform.Microsoft.gradient(startColorstr='<% color2 %>', endColorstr='<% color1 %>', GradientType=0);
+    -webkit-box-shadow:0 1px 3px rgba(0, 0, 0, 0.25),inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+    -moz-box-shadow:0 1px 3px rgba(0, 0, 0, 0.25),inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+    box-shadow:0 1px 3px rgba(0, 0, 0, 0.25),inset 0 -1px 0 rgba(0, 0, 0, 0.1);
+}
+...
+
+    $self->write_file('tmpl/include/sidebar.tt', <<'...');
+<ul>
+    <li><a href="[% uri_for('/') %]">Home</a></li>
+</ul>
+...
+
+    $self->write_file("t/00_compile.t", <<'...');
 use strict;
 use warnings;
+use Test::More;
 
-our $VERSION = '0.01';
+use_ok $_ for qw(
+    <% $module %>
+    <% $module %>::Web
+);
+
+done_testing;
+...
+}
+
+sub create_web_pms {
+    my ($self) = @_;
+
+    my $moniker = "Web";
+
+    $self->write_file("lib/<<PATH>>/$moniker.pm", <<'...', { xslate => $self->create_view(tmpl_path => 'tmpl/'), moniker => $moniker });
+package <% $module %>::<% $moniker %>;
+use strict;
+use warnings;
+use utf8;
+use parent qw(<% $module %> Amon2::Web);
+use File::Spec;
+
+# dispatcher
+use <% $module %>::<% $moniker %>::Dispatcher;
+sub dispatch {
+    return <% $module %>::<% $moniker %>::Dispatcher->dispatch($_[0]) or die "response is not generated";
+}
+
+<% $xslate %>
+
+# load plugins
+__PACKAGE__->load_plugins(
+    'Web::FillInFormLite',
+);
+
+sub show_error {
+    my ( $c, $msg, $code ) = @_;
+    my $res = $c->render( 'error.tt', { message => $msg } );
+    $res->code( $code || 500 );
+    return $res;
+}
+
+# for your security
+__PACKAGE__->add_trigger(
+    AFTER_DISPATCH => sub {
+        my ( $c, $res ) = @_;
+
+        # http://blogs.msdn.com/b/ie/archive/2008/07/02/ie8-security-part-v-comprehensive-protection.aspx
+        $res->header( 'X-Content-Type-Options' => 'nosniff' );
+
+        # http://blog.mozilla.com/security/2010/09/08/x-frame-options/
+        $res->header( 'X-Frame-Options' => 'DENY' );
+
+        # Cache control.
+        $res->header( 'Cache-Control' => 'private' );
+    },
+);
+
+1;
+...
+        $self->write_file("lib/<<PATH>>/$moniker/Dispatcher.pm", <<'...', {moniker => $moniker});
+package <% $module %>::<% $moniker %>::Dispatcher;
+use strict;
+use warnings;
+use utf8;
+use Router::Simple::Declare;
+use Mouse::Util qw(get_code_package);
+use String::CamelCase qw(decamelize);
+use Module::Pluggable::Object;
+
+# define roots here.
+my $router = router {
+    # connect '/' => {controller => 'Root', action => 'index' };
+};
+
+my @controllers = Module::Pluggable::Object->new(
+    require     => 1,
+    search_path => ['<% $module %>::<% $moniker %>::C'],
+)->plugins;
+{
+    no strict 'refs';
+    for my $controller (@controllers) {
+        my $p0 = $controller;
+        $p0 =~ s/^<% $module %>::<% $moniker %>::C:://;
+        my $p1 = $p0 eq 'Root' ? '' : decamelize($p0) . '/';
+
+        for my $method (sort keys %{"${controller}::"}) {
+            next if $method =~ /(?:^_|^BEGIN$|^import$)/;
+            my $code = *{"${controller}::${method}"}{CODE};
+            next unless $code;
+            next if get_code_package($code) ne $controller;
+            my $p2 = $method eq 'index' ? '' : $method;
+            my $path = "/$p1$p2";
+            $router->connect($path => {
+                controller => $p0,
+                action     => $method,
+            });
+            print STDERR "map: $path => ${p0}::${method}\n" unless $ENV{HARNESS_ACTIVE};
+        }
+    }
+}
+
+sub dispatch {
+    my ($class, $c) = @_;
+    my $req = $c->request;
+    if (my $p = $router->match($req->env)) {
+        my $action = $p->{action};
+        $c->{args} = $p;
+        "@{[ ref Amon2->context ]}::C::$p->{controller}"->$action($c, $p);
+    } else {
+        $c->res_404();
+    }
+}
+
+1;
+...
+
+        $self->write_file("lib/<<PATH>>/$moniker/C/Root.pm", <<'...', {moniker => $moniker});
+package <% $module %>::<% $moniker %>::C::Root;
+use strict;
+use warnings;
+use utf8;
+
+sub index {
+    my ($class, $c) = @_;
+    $c->render('index.tt');
+}
+
+1;
+...
+}
 
 
 1;
-__END__
-
-=head1 NAME
-
-Amon2::Setup::Flavor::Zentooo - Perl extention to do something
-
-=head1 VERSION
-
-This document describes Amon2::Setup::Flavor::Zentooo version 0.01.
-
-=head1 SYNOPSIS
-
-    use Amon2::Setup::Flavor::Zentooo;
-
-=head1 DESCRIPTION
-
-# TODO
-
-=head1 INTERFACE
-
-=head2 Functions
-
-=head3 C<< hello() >>
-
-# TODO
-
-=head1 DEPENDENCIES
-
-Perl 5.8.1 or later.
-
-=head1 BUGS
-
-All complex software has bugs lurking in it, and this module is no
-exception. If you find a bug please either email me, or add the bug
-to cpan-RT.
-
-=head1 SEE ALSO
-
-L<perl>
-
-=head1 AUTHOR
-
-zentooo E<lt>ankerasoy@gmail.comE<gt>
-
-=head1 LICENSE AND COPYRIGHT
-
-Copyright (c) 2012, zentooo. All rights reserved.
-
-This library is free software; you can redistribute it and/or modify
-it under the same terms as Perl itself.
-
-=cut
