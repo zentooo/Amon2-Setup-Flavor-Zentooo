@@ -1,0 +1,39 @@
+This is Perl module Amon2::Setup::Flavor::Zentooo.
+
+INSTALLATION
+
+Type the following command:
+
+    $ curl -L http://cpanmin.us | perl - Amon2::Setup::Flavor::Zentooo
+
+Or install cpanm and then run the following command to install
+Amon2::Setup::Flavor::Zentooo:
+
+    $ cpanm Amon2::Setup::Flavor::Zentooo
+
+If you get an archive of this distribution, unpack it and build it
+as per the usual:
+
+    $ tar xzf Amon2-Setup-Flavor-Zentooo-$version.tar.gz
+    $ cd Amon2-Setup-Flavor-Zentooo-$version
+    $ perl Makefile.PL
+    $ make && make test
+
+Then install it:
+
+    $ make install
+
+DOCUMENTATION
+
+Amon2::Setup::Flavor::Zentooo documentation is available as in POD. So you can do:
+
+    $ perldoc Amon2::Setup::Flavor::Zentooo
+
+to read the documentation online with your favorite pager.
+
+LICENSE AND COPYRIGHT
+
+Copyright (c) 2012, zentooo. All rights reserved.
+
+This library is free software; you can redistribute it and/or modify
+it under the same terms as Perl itself.
