@@ -19,9 +19,28 @@ sub create_makefile_pl {
 }
 
 sub write_static_files {
-    my $self = shift;
+    my ($self, $base) = @_;
+    $base ||= 'static';
 
-    $self->SUPER::write_static_files("static/");
+    $self->write_file("$base/robots.txt", '');
+
+    $self->write_file("$base/js/main.js", <<'...');
+(function() {
+    function $(id) {
+        return document.getElementById(id);
+    }
+    document.addEventListener("DOMContentLoaded", function() {
+    }, false);
+})();
+...
+
+    $self->write_file("$base/css/main.css", <<'...');
+html {
+}
+
+body {
+}
+...
 }
 
 sub write_templates {
@@ -71,88 +90,23 @@ builder {
 [% WRAPPER 'include/layout.tt' %]
 
 <section>
-    <h1>Hello</h1>
+    <h1>Hello, hello, hello</h1>
 </section>
 
 [% END %]
 ...
 
     $self->write_file('tmpl/include/layout.tt', <<'...');
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml">
+<!DOCTYPE HTML>
+<html lang="en">
 <head>
-    <meta http-equiv="content-type" content="text/html; charset=utf-8" />
-    <title>[% title || '<%= $dist %>' %]</title>
-    <meta http-equiv="Content-Style-Type" content="text/css" />
-    <meta http-equiv="Content-Script-Type" content="text/javascript" />
-    <meta name="viewport" content="width=device-width, minimum-scale=1.0, maximum-scale=1.0"]]>
-    <meta name="format-detection" content="telephone=no" />
-    <% $tags %>
-    <link href="[% static_file('/static/css/style.css') %]" rel="stylesheet" type="text/css" media="screen" />
-    <script src="[% static_file('/static/js/main.js') %]"></script>
-    <!--[if lt IE 9]>
-        <script src="http://html5shiv.googlecode.com/svn/trunk/html5.js"></script>
-    <![endif]-->
+    <meta charset="UTF-8">
+    <title></title>
 </head>
-<body[% IF bodyID %] id="[% bodyID %]"[% END %]>
-    <div class="topbar-wrapper" style="z-index: 5;">
-        <div class="topbar">
-            <div class="topbar-inner">
-                <div class="container">
-                <h3><a href="#"><% $dist %></a></h3>
-                </div>
-            </div><!-- /topbar-inner -->
-        </div><!-- /topbar -->
-    </div>
-    <div class="container-fluid">
-        <div class="sidebar">
-                [% INCLUDE "include/sidebar.tt" %]
-        </div>
-        <div class="content">
-            [% content %]
-        </div>
-    </div>
-    <footer class="footer">
-        Powered by <a href="http://amon.64p.org/">Amon2</a>
-    </footer>
+<body>
+[% content %]
 </body>
 </html>
-...
-
-    $self->write_file('static/css/style.css', <<'...', {color1 => '#117711', color2 => '#119911'});
-body {
-    margin-top: 50px;
-}
-
-footer {
-    text-align: right;
-    padding-right: 10px;
-    padding-top: 2px; }
-    footer a {
-        text-decoration: none;
-        color: black;
-        font-weight: bold;
-    }
-
-/* smart phones */
-@media screen and (max-device-width: 480px) {
-}
-
-.topbar-inner,.topbar .fill{
-    background-color:<% color1 %>;
-    background-repeat:repeat-x;
-    background-image:-khtml-gradient(linear, left top, left bottom, from(<% color2 %>), to(<% color1 %>));
-    background-image:-moz-linear-gradient(top, <% color2 %>, <% color1 %>);
-    background-image:-ms-linear-gradient(top, <% color2 %>, <% color1 %>);
-    background-image:-webkit-gradient(linear, left top, left bottom, color-stop(0%, <% color2 %>), color-stop(100%, <% color1 %>));
-    background-image:-webkit-linear-gradient(top, <% color2 %>, <% color1 %>);
-    background-image:-o-linear-gradient(top, <% color2 %>, <% color1 %>);
-    background-image:linear-gradient(top, <% color2 %>, <% color1 %>);
-    filter:progid:DXImageTransform.Microsoft.gradient(startColorstr='<% color2 %>', endColorstr='<% color1 %>', GradientType=0);
-    -webkit-box-shadow:0 1px 3px rgba(0, 0, 0, 0.25),inset 0 -1px 0 rgba(0, 0, 0, 0.1);
-    -moz-box-shadow:0 1px 3px rgba(0, 0, 0, 0.25),inset 0 -1px 0 rgba(0, 0, 0, 0.1);
-    box-shadow:0 1px 3px rgba(0, 0, 0, 0.25),inset 0 -1px 0 rgba(0, 0, 0, 0.1);
-}
 ...
 
     $self->write_file('tmpl/include/sidebar.tt', <<'...');
@@ -297,6 +251,5 @@ sub index {
 1;
 ...
 }
-
 
 1;
