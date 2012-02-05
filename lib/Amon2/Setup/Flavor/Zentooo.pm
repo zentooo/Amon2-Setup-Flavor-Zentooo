@@ -52,7 +52,42 @@ sub write_templates {
 sub run {
     my $self = shift;
 
-    $self->SUPER::run();
+    $self->write_file('lib/<<PATH>>.pm', <<'...');
+package <% $module %>;
+use strict;
+use warnings;
+use utf8;
+use parent qw/Amon2/;
+our $VERSION='0.01';
+use 5.008001;
+
+
+1;
+...
+
+    $self->create_web_pms();
+    $self->write_static_files();
+
+    for my $status (qw/404 500 502 503 504/) {
+        $self->write_status_file("static/$status.html", $status);
+    }
+
+    $self->write_file('.gitignore', <<'...');
+Makefile
+inc/
+MANIFEST
+*.bak
+*.old
+nytprof.out
+nytprof/
+*.db
+blib/
+pm_to_blib
+META.json
+META.yml
+MYMETA.json
+MYMETA.yml
+...
 
     $self->write_file('app.psgi', <<'...', +{ header => $self->psgi_header });
 <% $header %>
@@ -61,10 +96,7 @@ use Plack::App::File;
 use Plack::Util;
 
 my $basedir = File::Spec->rel2abs(dirname(__FILE__));
-{
-    my $c = <% $module _ '::Web' %>->new();
-    $c->setup_schema();
-}
+
 builder {
     enable 'Plack::Middleware::Static',
         path => qr{^(?:/robots\.txt|/favicon\.ico)$},
@@ -126,6 +158,43 @@ use_ok $_ for qw(
 );
 
 done_testing;
+...
+}
+
+sub create_view {
+    my ($self, $tmpl_path) = @_;
+
+    $self->render_string(<<'...', +{ tepl_path => $tmpl_path });
+# setup view class
+use Text::Xslate;
+{
+    my $view_conf = +{};
+    $view_conf->{path} = [ File::Spec->catdir(__PACKAGE__->base_dir(), '[% tmpl_path %]') ];
+
+    my $view = Text::Xslate->new(+{
+        'syntax'   => 'TTerse',
+        'module'   => [ 'Text::Xslate::Bridge::Star' ],
+        'function' => {
+            c => sub { Amon2->context() },
+            uri_with => sub { Amon2->context()->req->uri_with(@_) },
+            uri_for  => sub { Amon2->context()->uri_for(@_) },
+            static_file => do {
+                my %static_file_cache;
+                sub {
+                    my $fname = shift;
+                    my $c = Amon2->context;
+                    if (not exists $static_file_cache{$fname}) {
+                        my $fullpath = File::Spec->catfile($c->base_dir(), $fname);
+                        $static_file_cache{$fname} = (stat $fullpath)[9];
+                    }
+                    return $c->uri_for($fname, { 't' => $static_file_cache{$fname} || 0 });
+                }
+            },
+        },
+        %$view_conf
+    });
+    sub create_view { $view }
+}
 ...
 }
 
