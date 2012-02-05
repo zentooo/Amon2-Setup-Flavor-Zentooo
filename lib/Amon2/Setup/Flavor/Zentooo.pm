@@ -162,14 +162,15 @@ done_testing;
 }
 
 sub create_view {
-    my ($self, $tmpl_path) = @_;
+    my ($self, %args) = @_;
+    use Data::Dump qw/dump/;
 
-    $self->render_string(<<'...', +{ tepl_path => $tmpl_path });
+    $self->render_string(<<'...');
 # setup view class
 use Text::Xslate;
 {
     my $view_conf = +{};
-    $view_conf->{path} = [ File::Spec->catdir(__PACKAGE__->base_dir(), '[% tmpl_path %]') ];
+    $view_conf->{path} = [ File::Spec->catdir(__PACKAGE__->base_dir(), '/tmpl') ];
 
     my $view = Text::Xslate->new(+{
         'syntax'   => 'TTerse',
@@ -203,7 +204,7 @@ sub create_web_pms {
 
     my $moniker = "Web";
 
-    $self->write_file("lib/<<PATH>>/$moniker.pm", <<'...', { xslate => $self->create_view(tmpl_path => 'tmpl/'), moniker => $moniker });
+    $self->write_file("lib/<<PATH>>/$moniker.pm", <<'...', { xslate => $self->create_view, moniker => $moniker });
 package <% $module %>::<% $moniker %>;
 use strict;
 use warnings;
